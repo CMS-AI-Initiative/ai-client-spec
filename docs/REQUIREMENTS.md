@@ -85,3 +85,10 @@ _(in alphabetical order)_
 * [LLPhant](https://github.com/LLPhant/LLPhant)
 * [OpenAI PHP](https://github.com/openai-php/client)
 * [Vercel AI SDK](https://github.com/vercel/ai)
+
+### Client-side AI
+
+_(in alphabetical order)_
+
+* [Chrome built-in AI Prompt API](https://github.com/webmachinelearning/prompt-api)
+* [transformers.js](https://github.com/huggingface/transformers.js/)
