@@ -15,7 +15,7 @@ Enable calling any generative AI implementation using a uniform API in various p
 
 ## Architecture requirements
 
-This section lists the key requirements that the specification and any implementation of it must meet.
+This section lists the key requirements that the specification and any implementation of it must meet. For explanation on specific terms, see the [glossary](./GLOSSARY.md).
 
 * MUST support any kinds of AI implementation, i.e. cloud-based AI, server-side AI, client-side AI.
 * MUST define clear, language-agnostic data structures for AI inputs and outputs, precise enough to allow for consistent implementation across languages (e.g. express in JSON schema).
@@ -29,30 +29,29 @@ This section lists the key requirements that the specification and any implement
   * Classification
   * Text to Speech
   * Embedding
-* MUST support response streaming.
+* MUST support response streaming for arbitrary output modalities.
 * MUST allow for long-running operations that may take several minutes, _if_ relevant for the selected provider.
 * MUST define standard ways for interacting with optional provider capabilities, such as managing chat history or specifying multimodal inputs/outputs, _if_ the selected provider supports them.
 * MUST support diverse common model parameters, such as temperature, top P, or image aspect ratio, with uniform names and behavior across providers, _if_ the selected provider supports them.
 * MUST define a modular component model that allows for the addition of new providers, models, and features without modifying core functionality.
 * MUST define an API for external packages to register and implement AI model providers.
 * MUST be decoupled from any AI provider's implementation details (e.g. not all providers require HTTP requests or API authentication).
-* MUST allow provider and model discovery based on specific input/output modalities and configuration options supported.
+* MUST allow provider and model discovery based on specific inputs, outputs, and configuration options supported.
 * MUST define data types and interfaces that have direct equivalents in all supported languages (e.g. no multiple inheritance for classes).
 * MUST define separate APIs for SDK usage and provider registration, so that iterations or breaking changes in one don't automatically affect the other.
 * MUST include a REST API specification to allow accessing the AI provider and model capabilities through client-side code (e.g. JavaScript).
+
+### Best practices
+
+* SHOULD define concepts and paradigms so that they can be applied in other AI infrastructure projects, either in combination or separate from the AI client SDK (e.g. MCP, real-time AI abstraction, prompt generation).
+* SHOULD provide middleware that can be used to "polyfill" certain functionality when a provider does not support it (e.g. message history, downloading files from URLs).
+* SHOULD allow for arbitrary request and response parameters for specific providers or models to be passed through even when not formally supported, to cater for provider specific features or to allow for newly added features to be used before official support is added to the SDK.
 
 ### Out of scope
 
 * MUST NOT include any common AI features beyond the actual AI client (e.g. no MCP, no agents).
 * MUST NOT include any actual provider implementations in the core package—these should be separate packages.
-
-## Glossary
-
-* **Agent**: An autonomous system that can perceive its environment, make decisions, and take actions to achieve specific goals, often leveraging AI models.
-* **MCP**: The "Model Context Protocol", a proposed standard for connecting AI assistants to the systems where data lives.
-* **Modality**: The type or format of input provided to, or output received from, an AI model. Examples include text, image, audio, video, and function call requests/results.
-* **Model**: A specific AI model that supports arbitrary AI features and modalities. Examples include content generation, classification, embedding.
-* **Provider**: An entity (company, organization, or platform) that offers access to one or more AI models or services via an API (e.g., Anthropic, Google, OpenAI, a locally hosted model).
+* MUST NOT include a real-time / live AI abstraction as it requires different infrastructure.
 
 ## Credit
 
@@ -80,6 +79,7 @@ _(in alphabetical order)_
 
 * [AI Services WordPress plugin](https://github.com/felixarntz/ai-services)
 * [Drupal AI](https://git.drupalcode.org/project/ai)
+* [Firebase Genkit](https://github.com/firebase/genkit)
 * [Google Gen AI SDK for TypeScript and JavaScript](https://github.com/googleapis/js-genai)
 * [LangChain.js](https://github.com/langchain-ai/langchainjs)
 * [LLPhant](https://github.com/LLPhant/LLPhant)
