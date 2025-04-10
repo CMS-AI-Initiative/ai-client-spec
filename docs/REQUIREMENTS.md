@@ -86,6 +86,12 @@ _(in alphabetical order)_
 * [OpenAI PHP](https://github.com/openai-php/client)
 * [Vercel AI SDK](https://github.com/vercel/ai)
 
+### AI specifications
+
+* [A2A protocol](https://github.com/google/A2A)
+* [MCP](https://github.com/modelcontextprotocol/modelcontextprotocol)
+* [OpenAI model spec](https://cdn.openai.com/spec/model-spec-2024-05-08.html)
+
 ### Client-side AI
 
 _(in alphabetical order)_
