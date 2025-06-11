@@ -9,5 +9,5 @@ This glossary defines common terms relevant for the AI client SDK and related pr
 * **Message part**: A part of a message, such as a piece of text, a URL, a file, or a function call.
 * **Modality**: The type or format of input provided to, or output received from, an AI model. Examples include text, image, audio, and video.
 * **Model**: A specific AI model that supports arbitrary AI features and modalities. Examples include content generation, classification, embedding.
-* **Prompt**: The input that a generative AI model uses to generate content—usually text, but it can also be of other modalities.
-* **Provider**: An entity (company, organization, or platform) that offers access to one or more AI models or services via an API (e.g., Anthropic, Google, OpenAI, a locally hosted model).
+* **Prompt**: The input that a generative AI model uses to generate content—often text, but it can also be of other modalities.
+* **Provider**: An entity (company, organization, or platform) that offers access to one or more AI models or services via an API (e.g., Anthropic, Google, OpenAI, a locally hosted service).

@@ -2,6 +2,7 @@
 
 This repository defines the AI client specification, to enable calling any generative AI implementation using a uniform API in various programming languages.
 
+* [Glossary](https://github.com/CMS-AI-Initiative/ai-client-spec/blob/main/docs/GLOSSARY.md)
 * [Requirements](https://github.com/CMS-AI-Initiative/ai-client-spec/blob/main/docs/REQUIREMENTS.md)
 
 **This is a work in progress.** Next steps are:
