@@ -4,6 +4,7 @@ This repository defines the AI client specification, to enable calling any gener
 
 * [Glossary](https://github.com/CMS-AI-Initiative/ai-client-spec/blob/main/docs/GLOSSARY.md)
 * [Requirements](https://github.com/CMS-AI-Initiative/ai-client-spec/blob/main/docs/REQUIREMENTS.md)
+* [Architecture](https://github.com/CMS-AI-Initiative/ai-client-spec/blob/main/docs/ARCHITECTURE.md)
 
 **This is a work in progress.** Next steps are:
 
