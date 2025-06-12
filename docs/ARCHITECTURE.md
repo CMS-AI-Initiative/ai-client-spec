@@ -28,7 +28,7 @@ $result = Ai::generateTextResult(
     'Write a 2-verse poem about PHP.',
     Anthropic::model(
         'claude-3.7-sonnet',
-        ['candidateCount' => 4]
+        [TextGenerationConfig::CANDIDATE_COUNT => 4]
     )
 );
 $texts = CandidatesUtil::toTexts(
@@ -36,17 +36,72 @@ $texts = CandidatesUtil::toTexts(
 );
 ```
 
-#### Generate an image using any suitable model from any provider
+#### Generate an image using any suitable OpenAI model
 
 ```php
-$modelsMetadata = Ai::defaultRegistry()->findModelMetadataForSupport(
+$modelsMetadata = Ai::defaultRegistry()->findProviderModelsMetadataForSupport(
+    'openai',
     AiFeature::IMAGE_GENERATION
 );
 $imageFile = Ai::generateImage(
     'Generate an illustration of the PHP elephant in the Carribean sea.',
     Ai::defaultRegistry()->getProviderModel(
-        $modelsMetadata[0]['provider']->getId(),
-        $modelsMetadata[0]['model']->getId()
+        'openai',
+        $modelsMetadata[0]->getId()
+    )
+);
+```
+
+#### Generate an image using any suitable model from any provider
+
+```php
+$providerModelsMetadata = Ai::defaultRegistry()->findModelsMetadataForSupport(
+    AiFeature::IMAGE_GENERATION
+);
+$imageFile = Ai::generateImage(
+    'Generate an illustration of the PHP elephant in the Carribean sea.',
+    Ai::defaultRegistry()->getProviderModel(
+        $providerModelsMetadata[0]->getProvider()->getId(),
+        $providerModelsMetadata[0]->getModels()[0]->getId()
+    )
+);
+```
+
+#### Generate text with JSON output using any suitable model from any provider
+
+```php
+$providerModelsMetadata = Ai::defaultRegistry()->findModelsMetadataForSupport(
+    AiFeature::TEXT_GENERATION,
+    [
+        // Make sure the model supports JSON output as well as following a given schema.
+        TextGenerationConfig::OUTPUT_MIME_TYPE => 'application/json',
+        TextGenerationConfig::OUTPUT_SCHEMA    => true,
+    ]
+);
+$imageFile = Ai::generateText(
+    'Transform the following CSV content into a JSON array of row data.',
+    Ai::defaultRegistry()->getProviderModel(
+        $providerModelsMetadata[0]->getProvider()->getId(),
+        $providerModelsMetadata[0]->getModels()[0]->getId(),
+        [
+            AiModelConfig::GENERATION_CONFIG => [
+                TextGenerationConfig::OUTPUT_MIME_TYPE => 'application/json',
+                TextGenerationConfig::OUTPUT_SCHEMA    => [
+                    'type'  => 'array',
+                    'items' => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'name' => [
+                                'type' => 'string',
+                            ],
+                            'age'  => [
+                                'type' => 'integer',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]
     )
 );
 ```
@@ -55,7 +110,11 @@ $imageFile = Ai::generateImage(
 
 This section shows comprehensive class diagrams for the proposed architecture. For explanation on specific terms, see the [glossary](./GLOSSARY.md).
 
-### Full class diagram [WIP, mostly missing feature and capability detection]
+**Note:** The class diagrams are not meant to be entirely comprehensive in terms of which AI features and capabilities are or will be supported. For now, they simply use "text generation", "image generation", "text to speech", and "speech generation" for illustrative purposes. Other features like "music generation" or "video generation" etc. would work similarly.
+
+**Note:** The class diagrams are also not meant to be comprehensive in terms of any specific configuration keys or parameters which are or will be supported. For now, the relevant definitions don't include any specific parameter names or constants.
+
+### Full class diagram
 
 ```mermaid
 ---
@@ -91,62 +150,74 @@ direction LR
         class Message {
             +getRole() MessageRole
             +getParts() MessagePart[]
+            +getJsonSchema() array< string, mixed >$
         }
         class MessagePart {
             +getType() MessagePartType
-            +getText() string
-            +getInlineFile() InlineFile
-            +getRemoteFile() RemoteFile
-            +getFunctionCall() FunctionCall
-            +getFunctionResponse() FunctionResponse
+            +getText() string?
+            +getInlineFile() InlineFile?
+            +getRemoteFile() RemoteFile?
+            +getFunctionCall() FunctionCall?
+            +getFunctionResponse() FunctionResponse?
+            +getJsonSchema() array< string, mixed >$
         }
         class File {
         }
         class InlineFile {
             +getMimeType() string
             +getBase64Data() string
+            +getJsonSchema() array< string, mixed >$
         }
         class RemoteFile {
             +getMimeType() string
             +getUrl() string
+            +getJsonSchema() array< string, mixed >$
         }
         class LocalFile {
             +getMimeType() string
             +getPath() string
+            +getJsonSchema() array< string, mixed >$
         }
         class FunctionCall {
             +getId() string
             +getName() string
-            +getArgs() array&lt; string, mixed &gt;
+            +getArgs() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
         }
         class FunctionResponse {
             +getId() string
             +getName() string
             +getResponse() mixed
+            +getJsonSchema() array< string, mixed >$
         }
         class Operation {
             +getId() string
             +getState() OperationState
+            +getJsonSchema() array< string, mixed >$
         }
         class GenerativeAiOperation {
             +getId() string
             +getState() OperationState
             +getResult() GenerativeAiResult
+            +getJsonSchema() array< string, mixed >$
         }
         class GenerativeAiResult {
             +getId() string
             +getCandidates() Candidate[]
             +getUsage() TokenUsage
+            +getJsonSchema() array< string, mixed >$
         }
         class Candidate {
             +getMessage() Message
             +getFinishReason() FinishReason
             +getTokenCount() int
+            +getJsonSchema() array< string, mixed >$
         }
         class TokenUsage {
             +getPromptTokens() int
             +getCompletionTokens() int
             +getTotalTokens() int
+            +getJsonSchema() array< string, mixed >$
         }
     }
     namespace Ai.Types.Enums {
@@ -178,6 +249,7 @@ direction LR
         }
         class AiModality {
             TEXT
+            DOCUMENT
             IMAGE
             AUDIO
             VIDEO
@@ -208,6 +280,8 @@ direction LR
             +getProviderClassName(string $id) string
             +isProviderConfigured(string $idOrClassName) bool
             +getProviderModel(string $idOrClassName, string $modelId, AiModelConfig|array $modelConfig) AiModel
+            +findProviderModelsMetadataForSupport(string $idOrClassName, AiFeature $feature, array<string, mixed > $capabilities) AiModelMetadata[]
+            +findModelsMetadataForSupport(AiFeature $feature, array<string, mixed > $capabilities) AiProviderModelMetadata[]
         }
     }
     namespace Ai.Providers.Contracts {
@@ -221,6 +295,7 @@ direction LR
             +metadata() AiModelMetadata
             +setConfig(AiModelConfig $config) void
             +getConfig() AiModelConfig
+            +getSupportedCapabilities() AiCapability[]$
         }
         class AiProviderAvailability {
             +isConfigured() bool
@@ -229,10 +304,6 @@ direction LR
             +listModelMetadata() AiModelMetadata[]
             +hasModelMetadata(string $modelId) bool
             +getModelMetadata(string $modelId) AiModelMetadata
-        }
-        class WithHttpClient {
-            +setHttpClient(HttpClient $client) void
-            +getHttpClient() HttpClient
         }
         class WithGenerativeAiOperations {
             +getOperation(string $operationId) GenerativeAiOperation
@@ -262,31 +333,100 @@ direction LR
         class AiSpeechGenerationOperationModel {
             +generateSpeechOperation(Message[] $prompt) GenerativeAiOperation
         }
+        class WithHttpClient {
+            +setHttpClient(HttpClient $client) void
+            +getHttpClient() HttpClient
+        }
+        class HttpClient {
+            +send(RequestInterface $request, array< string, mixed > $options) ResponseInterface
+            +request(string $method, string $uri, array< string, mixed > $options) ResponseInterface
+        }
+        class WithAuthentication {
+            +setAuthentication(Authentication $authentication) void
+            +getAuthentication() Authentication
+        }
+        class Authentication {
+            +authenticate(RequestInterface $request) void
+            +getJsonSchema() array< string, mixed >$
+        }
     }
     namespace Ai.Providers.Types {
         class AiProviderMetadata {
             +getId() string
             +getName() string
             +getType() AiProviderType
+            +getJsonSchema() array< string, mixed >$
         }
         class AiModelMetadata {
             +getId() string
             +getName() string
+            +getSupportedFeatures() AiFeature[]
+            +getSupportedCapabilities() AiCapability[]
+            +getJsonSchema() array< string, mixed >$
+        }
+        class AiProviderModelsMetadata {
+            +getProvider() AiProviderMetadata
+            +getModels() AiModelMetadata[]
+            +getJsonSchema() array< string, mixed >$
         }
         class AiModelConfig {
             +setSystemInstruction(string|MessagePart|MessagePart[]|Message $systemInstruction) void
             +getSystemInstruction() Message?
-            +setTextGenerationConfig(TextGenerationConfig $config) void
-            +getTextGenerationConfig() TextGenerationConfig?
-            +setImageGenerationConfig(ImageGenerationConfig $config) void
-            +getImageGenerationConfig() ImageGenerationConfig?
-            +setTextToSpeechConfig(TextToSpeechConfig $config) void
-            +getTextToSpeechConfig() TextToSpeechConfig?
-            +setSpeechGenerationConfig(SpeechGenerationConfig $config) void
-            +getSpeechGenerationConfig() SpeechGenerationConfig?
+            +setGenerationConfig(GenerationConfig $config) void
+            +getGenerationConfig() GenerationConfig?
+            +setTools(Tool[] $tools) void
+            +getTools() Tool[]
+            +getJsonSchema() array< string, mixed >$
+        }
+        class GenerationConfig {
+            +setValue(string $key, mixed $value) void
+            +getValue(string $key) mixed
+            +getValues() array< string, mixed >
+            +getAdditionalValues() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
+        }
+        class TextGenerationConfig {
+        }
+        class ImageGenerationConfig {
+        }
+        class TextToSpeechConfig {
+        }
+        class SpeechGenerationConfig {
+        }
+        class Tool {
+            +getType() ToolType
+            +getFunctionDeclarations() FunctionDeclaration[]?
+            +getWebSearch() WebSearch?
+            +getJsonSchema() array< string, mixed >$
+        }
+        class FunctionDeclaration {
+            +getName() string
+            +getDescription() string
+            +getParameters() mixed
+            +getJsonSchema() array< string, mixed >$
+        }
+        class WebSearch {
+            +getAllowedDomains() string[]
+            +getDisallowedDomains() string[]
+            +getJsonSchema() array< string, mixed >$
+        }
+        class AiCapability {
+            +isSupported() bool
+            +isSupportedValue(mixed $value) bool
+            +getSupportedValues() mixed[]
+            +getJsonSchema() array< string, mixed >$
         }
     }
     namespace Ai.Providers.Enums {
+        class AiProviderType {
+            CLOUD
+            SERVER
+            CLIENT
+        }
+        class ToolType {
+            FUNCTION_DECLARATIONS
+            WEB_SEARCH
+        }
         class AiFeature {
             TEXT_GENERATION
             IMAGE_GENERATION
@@ -296,10 +436,11 @@ direction LR
             VIDEO_GENERATION
             EMBEDDING
         }
-        class AiProviderType {
-            CLOUD
-            SERVER
-            CLIENT
+    }
+    namespace Ai.Providers.Util {
+        class AiFeaturesUtil {
+            +getSupportedFeatures(AiModel|string $modelClass) AiFeature[]$
+            +getSupportedCapabilities(AiModel|string $modelClass) AiCapability[]$
         }
     }
 
@@ -341,7 +482,6 @@ direction LR
     <<interface>> AiModel
     <<interface>> AiProviderAvailability
     <<interface>> AiModelMetadataDirectory
-    <<interface>> WithHttpClient
     <<interface>> WithGenerativeAiOperations
     <<interface>> AiTextGenerationModel
     <<interface>> AiImageGenerationModel
@@ -351,6 +491,11 @@ direction LR
     <<interface>> AiImageGenerationOperationModel
     <<interface>> AiTextToSpeechOperationModel
     <<interface>> AiSpeechGenerationOperationModel
+    <<interface>> WithHttpClient
+    <<interface>> HttpClient
+    <<interface>> WithAuthentication
+    <<interface>> Authentication
+    <<interface>> GenerationConfig
     <<Enumeration>> AiFeature
     <<Enumeration>> AiProviderType
 
@@ -360,10 +505,19 @@ direction LR
     AiProvider "1" *-- "1" AiModelMetadataDirectory
     AiModel "1" *-- "1" AiModelMetadata
     AiModel "1" *-- "1" AiModelConfig
+    AiProviderModelsMetadata "1" o-- "1" AiProviderMetadata
+    AiProviderModelsMetadata "1" o-- "1..*" AiModelMetadata
     AiProviderRegistry "1" o-- "0..*" AiProvider
     AiProviderRegistry "1" o-- "0..*" AiProviderMetadata
     AiModelMetadataDirectory "1" o-- "1..*" AiModelMetadata
+    AiModelMetadata "1" o-- "1..*" AiFeature
+    AiModelMetadata "1" o-- "0..*" AiCapability
+    AiModelConfig "1" o-- "0..1" GenerationConfig
+    AiModelConfig "1" o-- "0..*" Tool
+    Tool "1" o-- "0..*" FunctionDeclaration
+    Tool "1" o-- "0..1" WebSearch
     AiProviderMetadata ..> AiProviderType
+    AiModelMetadata ..> AiFeature
     AiModel <|-- AiTextGenerationModel
     AiModel <|-- AiImageGenerationModel
     AiModel <|-- AiTextToSpeechModel
@@ -372,6 +526,10 @@ direction LR
     AiModel <|-- AiImageGenerationOperationModel
     AiModel <|-- AiTextToSpeechOperationModel
     AiModel <|-- AiSpeechGenerationOperationModel
+    GenerationConfig <|-- TextGenerationConfig
+    GenerationConfig <|-- ImageGenerationConfig
+    GenerationConfig <|-- TextToSpeechConfig
+    GenerationConfig <|-- SpeechGenerationConfig
     WithGenerativeAiOperations <|-- AiTextGenerationOperationModel
     WithGenerativeAiOperations <|-- AiImageGenerationOperationModel
     WithGenerativeAiOperations <|-- AiTextToSpeechOperationModel
