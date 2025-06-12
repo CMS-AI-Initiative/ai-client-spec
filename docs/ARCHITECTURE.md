@@ -4,6 +4,53 @@ This document outlines the architecture for the language agnostic AI client spec
 
 **Note:** As the primary focus for this specification is to facilitate AI usage in PHP, some of the underlying syntax used in this documentation may use PHP conventions. This does not hinder interoperability with other programming languages. Only PHP language capabilities that can be easily replicated in other relevant programming languages will be used.
 
+## High-level API design
+
+The API design at a high level is heavily inspired by the [Vercel AI SDK](https://github.com/vercel/ai), which is widely used in the NodeJS ecosystem and one of the very few comprehensive AI client SDKs available.
+
+The main additional aspect that the Vercel AI SDK does not cater for easily is for a developer to use AI in a way that the choice of provider remains with the user. To clarify with an example: Instead of "Generate text with Google's model `gemini-2.5-flash`", go with "Generate text using any provider model that supports text generation and multimodal input". In other words, there needs to be a mechanism that allows finding any configured model that supports the given set of required AI features and capabilities.
+
+### Code examples
+
+#### Generate text using a Google model
+
+```php
+$text = Ai::generateText(
+    'Write a 2-verse poem about PHP.',
+    Google::model('gemini-2.5-flash')
+);
+```
+
+#### Generate multiple text candidates using an Anthropic model
+
+```php
+$result = Ai::generateTextResult(
+    'Write a 2-verse poem about PHP.',
+    Anthropic::model(
+        'claude-3.7-sonnet',
+        ['candidateCount' => 4]
+    )
+);
+$texts = CandidatesUtil::toTexts(
+    $result->getCandidates()
+);
+```
+
+#### Generate an image using any suitable model from any provider
+
+```php
+$modelsMetadata = Ai::defaultRegistry()->findModelMetadataForSupport(
+    AiFeature::IMAGE_GENERATION
+);
+$imageFile = Ai::generateImage(
+    'Generate an illustration of the PHP elephant in the Carribean sea.',
+    Ai::defaultRegistry()->getProviderModel(
+        $modelsMetadata[0]['provider']->getId(),
+        $modelsMetadata[0]['model']->getId()
+    )
+);
+```
+
 ## Class diagrams
 
 This section shows comprehensive class diagrams for the proposed architecture. For explanation on specific terms, see the [glossary](./GLOSSARY.md).
