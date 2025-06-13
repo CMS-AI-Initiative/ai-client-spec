@@ -67,6 +67,25 @@ $imageFile = Ai::generateImage(
 );
 ```
 
+#### Generate embeddings using any suitable model from any provider
+
+```php
+$providerModelsMetadata = Ai::defaultRegistry()->findModelsMetadataForSupport(
+    AiFeature::EMBEDDING_GENERATION
+);
+$embeddings = Ai::generateEmbeddings(
+    [
+        'A very long text.',
+        'Another very long text.',
+        'More long text.',
+    ],
+    Ai::defaultRegistry()->getProviderModel(
+        $providerModelsMetadata[0]->getProvider()->getId(),
+        $providerModelsMetadata[0]->getModels()[0]->getId()
+    )
+);
+```
+
 #### Generate text with JSON output using any suitable model from any provider
 
 ```php
@@ -110,7 +129,7 @@ $imageFile = Ai::generateText(
 
 This section shows comprehensive class diagrams for the proposed architecture. For explanation on specific terms, see the [glossary](./GLOSSARY.md).
 
-**Note:** The class diagrams are not meant to be entirely comprehensive in terms of which AI features and capabilities are or will be supported. For now, they simply use "text generation", "image generation", "text to speech", and "speech generation" for illustrative purposes. Other features like "music generation" or "video generation" etc. would work similarly.
+**Note:** The class diagrams are not meant to be entirely comprehensive in terms of which AI features and capabilities are or will be supported. For now, they simply use "text generation", "image generation", "text to speech", "speech generation", and "embedding generation" for illustrative purposes. Other features like "music generation" or "video generation" etc. would work similarly.
 
 **Note:** The class diagrams are also not meant to be comprehensive in terms of any specific configuration keys or parameters which are or will be supported. For now, the relevant definitions don't include any specific parameter names or constants.
 
@@ -135,6 +154,7 @@ direction LR
             +generateImage(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
             +textToSpeech(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
             +generateSpeech(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
+            +generateEmbeddings(Message[] $input, AiModel $model) Embedding[]$
             +generateResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +generateOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateTextResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
@@ -142,10 +162,12 @@ direction LR
             +generateImageResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +textToSpeechResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +generateSpeechResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
+            +generateEmbeddingsResult(string[]|Message[] $input, AiModel $model) EmbeddingResult$
             +generateTextOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateImageOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +textToSpeechOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateSpeechOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
+            +generateEmbeddingsOperation(string[]|Message[] $input, AiModel $model) EmbeddingOperation$
         }
     }
     namespace Ai.Types {
@@ -192,6 +214,10 @@ direction LR
             +getResponse() mixed
             +getJsonSchema() array< string, mixed >$
         }
+        class Embedding {
+            +getVector() float[]
+            +getDimension() int
+        }
         class Operation {
             +getId() string
             +getState() OperationState
@@ -203,10 +229,30 @@ direction LR
             +getResult() GenerativeAiResult
             +getJsonSchema() array< string, mixed >$
         }
+        class EmbeddingOperation {
+            +getId() string
+            +getState() OperationState
+            +getResult() EmbeddingResult
+            +getJsonSchema() array< string, mixed >$
+        }
+        class Result {
+            +getId() string
+            +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
+        }
         class GenerativeAiResult {
             +getId() string
             +getCandidates() Candidate[]
             +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
+        }
+        class EmbeddingResult {
+            +getId() string
+            +getEmbeddings() Embedding[]
+            +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
             +getJsonSchema() array< string, mixed >$
         }
         class Candidate {
@@ -310,6 +356,9 @@ direction LR
         class WithGenerativeAiOperations {
             +getOperation(string $operationId) GenerativeAiOperation
         }
+        class WithEmbeddingOperations {
+            +getOperation(string $operationId) EmbeddingOperation
+        }
         class AiTextGenerationModel {
             +generateTextResult(Message[] $prompt) GenerativeAiResult
             +streamGenerateTextResult(Message[] $prompt) Generator< GenerativeAiResult >
@@ -323,6 +372,9 @@ direction LR
         class AiSpeechGenerationModel {
             +generateSpeechResult(Message[] $prompt) GenerativeAiResult
         }
+        class AiEmbeddingGenerationModel {
+            +generateEmbeddingsResult(Message[] $input) EmbeddingResult
+        }
         class AiTextGenerationOperationModel {
             +generateTextOperation(Message[] $prompt) GenerativeAiOperation
         }
@@ -334,6 +386,9 @@ direction LR
         }
         class AiSpeechGenerationOperationModel {
             +generateSpeechOperation(Message[] $prompt) GenerativeAiOperation
+        }
+        class AiEmbeddingGenerationOperationModel {
+            +generateEmbeddingsOperation(Message[] $input) EmbeddingOperation
         }
         class WithHttpClient {
             +setHttpClient(HttpClient $client) void
@@ -395,6 +450,8 @@ direction LR
         }
         class SpeechGenerationConfig {
         }
+        class EmbeddingGenerationConfig {
+        }
         class Tool {
             +getType() ToolType
             +getFunctionDeclarations() FunctionDeclaration[]?
@@ -436,7 +493,7 @@ direction LR
             SPEECH_GENERATION
             MUSIC_GENERATION
             VIDEO_GENERATION
-            EMBEDDING
+            EMBEDDING_GENERATION
         }
     }
     namespace Ai.Providers.Util {
@@ -449,6 +506,7 @@ direction LR
     %% Annotations for Ai namespaces, except Ai.Providers.*.
     <<interface>> File
     <<interface>> Operation
+    <<interface>> Result
     <<Enumeration>> MessageRole
     <<Enumeration>> MessagePartType
     <<Enumeration>> FinishReason
@@ -459,15 +517,20 @@ direction LR
     AiEntrypoint .. Message : receives
     AiEntrypoint .. MessagePart : receives
     AiEntrypoint .. GenerativeAiResult : creates
+    AiEntrypoint .. EmbeddingResult : creates
     AiEntrypoint .. GenerativeAiOperation : creates
+    AiEntrypoint .. EmbeddingOperation : creates
     Message "1" *-- "1..*" MessagePart
     MessagePart "1" o-- "0..1" InlineFile
     MessagePart "1" o-- "0..1" RemoteFile
     MessagePart "1" o-- "0..1" FunctionCall
     MessagePart "1" o-- "0..1" FunctionResponse
     GenerativeAiOperation "1" o-- "0..1" GenerativeAiResult
+    EmbeddingOperation "1" o-- "0..1" EmbeddingResult
     GenerativeAiResult "1" o-- "1..*" Candidate
     GenerativeAiResult "1" o-- "1" TokenUsage
+    EmbeddingResult "1" o-- "1..*" Embedding
+    EmbeddingResult "1" o-- "1" TokenUsage
     Candidate "1" o-- "1" Message
     Message ..> MessageRole
     MessagePart ..> MessagePartType
@@ -478,6 +541,9 @@ direction LR
     File <|-- RemoteFile
     File <|-- LocalFile
     Operation <|-- GenerativeAiOperation
+    Operation <|-- EmbeddingOperation
+    Result <|-- GenerativeAiResult
+    Result <|-- EmbeddingResult
 
     %% Annotations for Ai.Providers.* namespaces.
     <<interface>> AiProvider
@@ -485,14 +551,17 @@ direction LR
     <<interface>> AiProviderAvailability
     <<interface>> AiModelMetadataDirectory
     <<interface>> WithGenerativeAiOperations
+    <<interface>> WithEmbeddingOperations
     <<interface>> AiTextGenerationModel
     <<interface>> AiImageGenerationModel
     <<interface>> AiTextToSpeechModel
     <<interface>> AiSpeechGenerationModel
+    <<interface>> AiEmbeddingGenerationModel
     <<interface>> AiTextGenerationOperationModel
     <<interface>> AiImageGenerationOperationModel
     <<interface>> AiTextToSpeechOperationModel
     <<interface>> AiSpeechGenerationOperationModel
+    <<interface>> AiEmbeddingGenerationOperationModel
     <<interface>> WithHttpClient
     <<interface>> HttpClient
     <<interface>> WithAuthentication
@@ -524,18 +593,17 @@ direction LR
     AiModel <|-- AiImageGenerationModel
     AiModel <|-- AiTextToSpeechModel
     AiModel <|-- AiSpeechGenerationModel
+    AiModel <|-- AiEmbeddingGenerationModel
     AiModel <|-- AiTextGenerationOperationModel
     AiModel <|-- AiImageGenerationOperationModel
     AiModel <|-- AiTextToSpeechOperationModel
     AiModel <|-- AiSpeechGenerationOperationModel
+    AiModel <|-- AiEmbeddingGenerationOperationModel
     GenerationConfig <|-- TextGenerationConfig
     GenerationConfig <|-- ImageGenerationConfig
     GenerationConfig <|-- TextToSpeechConfig
     GenerationConfig <|-- SpeechGenerationConfig
-    WithGenerativeAiOperations <|-- AiTextGenerationOperationModel
-    WithGenerativeAiOperations <|-- AiImageGenerationOperationModel
-    WithGenerativeAiOperations <|-- AiTextToSpeechOperationModel
-    WithGenerativeAiOperations <|-- AiSpeechGenerationOperation
+    GenerationConfig <|-- EmbeddingGenerationConfig
 ```
 
 ### Class diagram zoomed in on AI usage ONLY
@@ -559,6 +627,7 @@ direction LR
             +generateImage(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
             +textToSpeech(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
             +generateSpeech(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) File$
+            +generateEmbeddings(Message[] $input, AiModel $model) Embedding[]$
             +generateResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +generateOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateTextResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
@@ -566,10 +635,12 @@ direction LR
             +generateImageResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +textToSpeechResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
             +generateSpeechResult(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiResult$
+            +generateEmbeddingsResult(string[]|Message[] $input, AiModel $model) EmbeddingResult$
             +generateTextOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateImageOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +textToSpeechOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
             +generateSpeechOperation(string|MessagePart|MessagePart[]|Message|Message[] $prompt, AiModel $model) GenerativeAiOperation$
+            +generateEmbeddingsOperation(string[]|Message[] $input, AiModel $model) EmbeddingOperation$
         }
     }
     namespace Ai.Types {
@@ -616,6 +687,10 @@ direction LR
             +getResponse() mixed
             +getJsonSchema() array< string, mixed >$
         }
+        class Embedding {
+            +getVector() float[]
+            +getDimension() int
+        }
         class Operation {
             +getId() string
             +getState() OperationState
@@ -627,10 +702,30 @@ direction LR
             +getResult() GenerativeAiResult
             +getJsonSchema() array< string, mixed >$
         }
+        class EmbeddingOperation {
+            +getId() string
+            +getState() OperationState
+            +getResult() EmbeddingResult
+            +getJsonSchema() array< string, mixed >$
+        }
+        class Result {
+            +getId() string
+            +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
+        }
         class GenerativeAiResult {
             +getId() string
             +getCandidates() Candidate[]
             +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
+            +getJsonSchema() array< string, mixed >$
+        }
+        class EmbeddingResult {
+            +getId() string
+            +getEmbeddings() Embedding[]
+            +getUsage() TokenUsage
+            +getProviderMetadata() array< string, mixed >
             +getJsonSchema() array< string, mixed >$
         }
         class Candidate {
@@ -703,6 +798,7 @@ direction LR
     %% Annotations for Ai namespaces, except Ai.Providers.*.
     <<interface>> File
     <<interface>> Operation
+    <<interface>> Result
     <<Enumeration>> MessageRole
     <<Enumeration>> MessagePartType
     <<Enumeration>> FinishReason
@@ -713,15 +809,20 @@ direction LR
     AiEntrypoint .. Message : receives
     AiEntrypoint .. MessagePart : receives
     AiEntrypoint .. GenerativeAiResult : creates
+    AiEntrypoint .. EmbeddingResult : creates
     AiEntrypoint .. GenerativeAiOperation : creates
+    AiEntrypoint .. EmbeddingOperation : creates
     Message "1" *-- "1..*" MessagePart
     MessagePart "1" o-- "0..1" InlineFile
     MessagePart "1" o-- "0..1" RemoteFile
     MessagePart "1" o-- "0..1" FunctionCall
     MessagePart "1" o-- "0..1" FunctionResponse
     GenerativeAiOperation "1" o-- "0..1" GenerativeAiResult
+    EmbeddingOperation "1" o-- "0..1" EmbeddingResult
     GenerativeAiResult "1" o-- "1..*" Candidate
     GenerativeAiResult "1" o-- "1" TokenUsage
+    EmbeddingResult "1" o-- "1..*" Embedding
+    EmbeddingResult "1" o-- "1" TokenUsage
     Candidate "1" o-- "1" Message
     Message ..> MessageRole
     MessagePart ..> MessagePartType
@@ -732,6 +833,9 @@ direction LR
     File <|-- RemoteFile
     File <|-- LocalFile
     Operation <|-- GenerativeAiOperation
+    Operation <|-- EmbeddingOperation
+    Result <|-- GenerativeAiResult
+    Result <|-- EmbeddingResult
 ```
 
 ### Class diagram zoomed in on AI provider registration and implementation ONLY
@@ -781,6 +885,9 @@ direction LR
         class WithGenerativeAiOperations {
             +getOperation(string $operationId) GenerativeAiOperation
         }
+        class WithEmbeddingOperations {
+            +getOperation(string $operationId) EmbeddingOperation
+        }
         class AiTextGenerationModel {
             +generateTextResult(Message[] $prompt) GenerativeAiResult
             +streamGenerateTextResult(Message[] $prompt) Generator< GenerativeAiResult >
@@ -794,6 +901,9 @@ direction LR
         class AiSpeechGenerationModel {
             +generateSpeechResult(Message[] $prompt) GenerativeAiResult
         }
+        class AiEmbeddingGenerationModel {
+            +generateEmbeddingsResult(Message[] $input) EmbeddingResult
+        }
         class AiTextGenerationOperationModel {
             +generateTextOperation(Message[] $prompt) GenerativeAiOperation
         }
@@ -805,6 +915,9 @@ direction LR
         }
         class AiSpeechGenerationOperationModel {
             +generateSpeechOperation(Message[] $prompt) GenerativeAiOperation
+        }
+        class AiEmbeddingGenerationOperationModel {
+            +generateEmbeddingsOperation(Message[] $input) EmbeddingOperation
         }
         class WithHttpClient {
             +setHttpClient(HttpClient $client) void
@@ -866,6 +979,8 @@ direction LR
         }
         class SpeechGenerationConfig {
         }
+        class EmbeddingGenerationConfig {
+        }
         class Tool {
             +getType() ToolType
             +getFunctionDeclarations() FunctionDeclaration[]?
@@ -907,7 +1022,7 @@ direction LR
             SPEECH_GENERATION
             MUSIC_GENERATION
             VIDEO_GENERATION
-            EMBEDDING
+            EMBEDDING_GENERATION
         }
     }
     namespace Ai.Providers.Util {
@@ -923,14 +1038,17 @@ direction LR
     <<interface>> AiProviderAvailability
     <<interface>> AiModelMetadataDirectory
     <<interface>> WithGenerativeAiOperations
+    <<interface>> WithEmbeddingOperations
     <<interface>> AiTextGenerationModel
     <<interface>> AiImageGenerationModel
     <<interface>> AiTextToSpeechModel
     <<interface>> AiSpeechGenerationModel
+    <<interface>> AiEmbeddingGenerationModel
     <<interface>> AiTextGenerationOperationModel
     <<interface>> AiImageGenerationOperationModel
     <<interface>> AiTextToSpeechOperationModel
     <<interface>> AiSpeechGenerationOperationModel
+    <<interface>> AiEmbeddingGenerationOperationModel
     <<interface>> WithHttpClient
     <<interface>> HttpClient
     <<interface>> WithAuthentication
@@ -962,16 +1080,15 @@ direction LR
     AiModel <|-- AiImageGenerationModel
     AiModel <|-- AiTextToSpeechModel
     AiModel <|-- AiSpeechGenerationModel
+    AiModel <|-- AiEmbeddingGenerationModel
     AiModel <|-- AiTextGenerationOperationModel
     AiModel <|-- AiImageGenerationOperationModel
     AiModel <|-- AiTextToSpeechOperationModel
     AiModel <|-- AiSpeechGenerationOperationModel
+    AiModel <|-- AiEmbeddingGenerationOperationModel
     GenerationConfig <|-- TextGenerationConfig
     GenerationConfig <|-- ImageGenerationConfig
     GenerationConfig <|-- TextToSpeechConfig
     GenerationConfig <|-- SpeechGenerationConfig
-    WithGenerativeAiOperations <|-- AiTextGenerationOperationModel
-    WithGenerativeAiOperations <|-- AiImageGenerationOperationModel
-    WithGenerativeAiOperations <|-- AiTextToSpeechOperationModel
-    WithGenerativeAiOperations <|-- AiSpeechGenerationOperation
+    GenerationConfig <|-- EmbeddingGenerationConfig
 ```
